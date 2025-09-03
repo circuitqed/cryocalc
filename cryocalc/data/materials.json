@@ -1,0 +1,347 @@
+{
+  "materials": {
+    "aluminum_1100": {
+      "name": "Aluminum 1100 (UNS A91100)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [23.39172, -148.5733, 422.1917, -653.6664, 607.0402, -346.152, 118.4276, -22.2781, 1.770187],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        }
+      }
+    },
+    "aluminum_3003_f": {
+      "name": "Aluminum 3003-F (UNS A93003)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [0.63736, -1.1437, 7.4624, -12.6905, 11.9165, -6.18721, 1.63939, -0.172667, 0],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [46.6467, -314.292, 866.662, -1298.3, 1162.27, -637.795, 210.351, -38.3094, 2.96344],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-412.77, -0.30389, 0.0087696, -9.9821e-6, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "aluminum_5083_o": {
+      "name": "Aluminum 5083-O (UNS A95083)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-0.90933, 5.751, -11.112, 13.612, -9.3977, 3.6873, -0.77295, 0.067336, 0],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [46.6467, -314.292, 866.662, -1298.3, 1162.27, -637.795, 210.351, -38.3094, 2.96344],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "youngs_modulus": {
+          "equation_type": "polynomial",
+          "coefficients": [80.83212, 0.01061708, -3.016100e-4, 7.561340e-7, -6.994800e-10],
+          "temperature_range": [0, 300],
+          "units": "GPa"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-412.77, -0.30389, 0.0087696, -9.9821e-6, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "aluminum_6061_t6": {
+      "name": "Aluminum 6061-T6 (UNS A96061)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [0.07918, 1.0957, -0.07277, 0.08084, 0.02803, -0.09464, 0.04179, -0.00571, 0],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [46.6467, -314.292, 866.662, -1298.3, 1162.27, -637.795, 210.351, -38.3094, 2.96344],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "youngs_modulus": {
+          "equation_type": "polynomial",
+          "coefficients": [77.71221, 0.01030646, -2.924100e-4, 8.993600e-7, -1.070900e-9],
+          "temperature_range": [0, 299],
+          "units": "GPa"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-412.77, -0.30389, 0.0087696, -9.9821e-6, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "aluminum_6063_t5": {
+      "name": "Aluminum 6063-T5 (UNS A96063)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [22.401433, -141.13433, 394.95461, -601.15377, 547.83202, -305.99691, 102.38656, -18.810237, 1.4576882],
+          "temperature_range": [4, 295],
+          "units": "W/m-K"
+        }
+      }
+    },
+    "copper_ofhc_rrr50": {
+      "name": "Copper OFHC (UNS C10100/C10200) RRR=50",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "rational",
+          "coefficients": [1.8743, -0.6018, 0.26426, -0.051276, 0.003723, 1, -0.41538, 0.13294, -0.0219, 0.0014871],
+          "numerator_coefficients": [1.8743, -0.6018, 0.26426, -0.051276, 0.003723],
+          "denominator_coefficients": [1, -0.41538, 0.13294, -0.0219, 0.0014871],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        }
+      }
+    },
+    "copper_ofhc_rrr100": {
+      "name": "Copper OFHC (UNS C10100/C10200) RRR=100",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "rational",
+          "coefficients": [2.2154, -0.88068, 0.29505, -0.04831, 0.003207, 1, -0.47461, 0.13871, -0.02043, 0.001281],
+          "numerator_coefficients": [2.2154, -0.88068, 0.29505, -0.04831, 0.003207],
+          "denominator_coefficients": [1, -0.47461, 0.13871, -0.02043, 0.001281],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        }
+      }
+    },
+    "copper_ofhc_general": {
+      "name": "Copper OFHC (UNS C10100/C10200)",
+      "properties": {
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-1.91844, -0.15973, 8.61013, -18.996, 21.9661, -12.7328, 3.54322, -0.3797, 0],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "electrical_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-17.9081289, 67.131914, -118.809316, 109.9845997, -53.8696089, 13.30247491, -1.30843441, 0, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-6/K"
+        }
+      }
+    },
+    "stainless_steel_304": {
+      "name": "Stainless Steel 304 (UNS S30400)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-1.4087, 1.3982, 0.2543, -0.626, 0.2334, 0.4256, -0.4658, 0.165, -0.0199],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [22.0061, -127.5528, 303.647, -381.0098, 274.0328, -112.9212, 24.7593, -2.239153, 0],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "youngs_modulus_low": {
+          "equation_type": "polynomial",
+          "coefficients": [209.8145, 0.1217019, -0.01146999, 3.605430e-4, -3.017900e-6],
+          "temperature_range": [5, 57],
+          "units": "GPa"
+        },
+        "youngs_modulus_high": {
+          "equation_type": "polynomial",
+          "coefficients": [210.0593, 0.1534883, -0.001617390, 5.117060e-6, -6.154600e-9],
+          "temperature_range": [57, 293],
+          "units": "GPa"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-295.54, -0.39811, 0.0092683, -2.0261e-5, 1.7127e-8],
+          "temperature_range": [23, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "stainless_steel_316": {
+      "name": "Stainless Steel 316 (UNS S31600)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-1.4087, 1.3982, 0.2543, -0.626, 0.2334, 0.4256, -0.4658, 0.165, -0.0199],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "youngs_modulus_low": {
+          "equation_type": "polynomial",
+          "coefficients": [208.4729, -0.1358965, 0.008368629, -1.381700e-4, 6.831930e-7],
+          "temperature_range": [5, 60],
+          "units": "GPa"
+        },
+        "youngs_modulus_high": {
+          "equation_type": "polynomial",
+          "coefficients": [207.9488, 0.07394241, -9.627200e-4, 2.845560e-6, -3.240800e-9],
+          "temperature_range": [48, 294],
+          "units": "GPa"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-295.54, -0.39811, 0.0092683, -2.0261e-5, 1.7127e-8],
+          "temperature_range": [23, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "fiberglass_epoxy_g10": {
+      "name": "Fiberglass Epoxy G-10",
+      "properties": {
+        "thermal_conductivity_normal": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-4.1236, 13.788, -26.068, 26.272, -14.663, 4.4954, -0.6905, 0.0397, 0],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "thermal_conductivity_wrap": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-2.64827, 8.80228, -24.8998, 41.1625, -39.8754, 23.1778, -7.95635, 1.48806, -0.11701],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-2.4083, 7.6006, -8.2982, 7.3301, -4.2386, 1.4294, -0.24396, 0.015236, 0],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "linear_expansion_normal": {
+          "equation_type": "polynomial",
+          "coefficients": [-719.8, 0.4455, 0.007505, -2.219e-6, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        },
+        "linear_expansion_wrap": {
+          "equation_type": "polynomial",
+          "coefficients": [-246.9, 0.2064, 0.003072, -3.226e-6, 0],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "teflon": {
+      "name": "Teflon",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [2.738, -30.677, 89.43, -136.99, 124.69, -69.556, 23.32, -4.3135, 0.33829],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [31.88256, -166.51949, 352.01879, -393.44232, 259.98072, -104.61429, 24.99276, -3.20792, 0.16503],
+          "temperature_range": [4, 300],
+          "units": "J/kg-K"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-2125.0, -0.8201, 0.06161, -3.171e-4, 6.850e-7],
+          "temperature_range": [4, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "titanium_6al_4v": {
+      "name": "Ti-6Al-4V (UNS R56400)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-5107.8774, 19240.422, -30789.064, 27134.756, -14226.379, 4438.2154, -763.07767, 55.796592, 0],
+          "temperature_range": [23, 300],
+          "units": "W/m-K"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-171.1, -0.2140, 0.004807, -7.111e-6, 0],
+          "temperature_range": [24, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "beryllium": {
+      "name": "Beryllium",
+      "properties": {
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-526.84477, 2755.4105, -6209.8985, 7859.2257, -6106.2095, 2982.9958, -894.99967, 150.85256, -10.943615],
+          "temperature_range": [10, 284],
+          "units": "J/kg-K"
+        },
+        "linear_expansion_a_axis": {
+          "equation_type": "polynomial",
+          "coefficients": [-134.17300, -0.44051, 0.0034063, -6.5593e-7, -1.8112e-9],
+          "temperature_range": [75, 500],
+          "units": "10^-5 m/m"
+        },
+        "linear_expansion_c_axis": {
+          "equation_type": "polynomial",
+          "coefficients": [-86.08100, -0.26372, 0.0013623, 3.2709e-6, -4.8719e-9],
+          "temperature_range": [75, 500],
+          "units": "10^-5 m/m"
+        },
+        "linear_expansion_polycrystalline": {
+          "equation_type": "polynomial",
+          "coefficients": [-120.29800, -0.34687, 0.0025691, 8.9848e-7, -2.9422e-9],
+          "temperature_range": [75, 500],
+          "units": "10^-5 m/m"
+        }
+      }
+    },
+    "invar": {
+      "name": "Invar (Fe-36Ni) (UNS K93600)",
+      "properties": {
+        "thermal_conductivity": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [-2.7064, 8.5191, -15.923, 18.276, -11.9116, 4.40318, -0.86018, 0.068508, 0],
+          "temperature_range": [4, 300],
+          "units": "W/m-K"
+        },
+        "specific_heat": {
+          "equation_type": "logarithmic_polynomial",
+          "coefficients": [28.08, -228.23, 777.587, -1448.423, 1596.567, -1040.294, 371.2125, -56.004, 0],
+          "temperature_range": [4, 20],
+          "units": "J/kg-K"
+        },
+        "youngs_modulus": {
+          "equation_type": "polynomial",
+          "coefficients": [141.565, 0.0254435, -0.00100842, 6.72797e-6, -1.08230e-8],
+          "temperature_range": [1, 298],
+          "units": "GPa"
+        },
+        "linear_expansion": {
+          "equation_type": "polynomial",
+          "coefficients": [-52.65, 0.1009, 8.395e-4, -1.973e-6, 9.794e-11],
+          "temperature_range": [80, 300],
+          "units": "10^-5 m/m"
+        }
+      }
+    }
+  }
+}

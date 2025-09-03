@@ -20,14 +20,14 @@ pip install cryocalc
 
 ### From Source
 ```bash
-git clone https://github.com/cryocalc/cryocalc.git
+git clone https://github.com/circuitqed/cryocalc.git
 cd cryocalc
 pip install -e .
 ```
 
 ### Development Installation
 ```bash
-git clone https://github.com/cryocalc/cryocalc.git
+git clone https://github.com/circuitqed/cryocalc.git
 cd cryocalc
 pip install -e ".[dev]"
 ```
@@ -189,11 +189,11 @@ If you use CryoCalc in your research, please cite:
 ```
 CryoCalc: A Python Package for Cryogenic Material Property Calculations
 Version 1.0.0
-https://github.com/cryocalc/cryocalc
+https://github.com/circuitqed/cryocalc
 ```
 
 ## Support
 
 - Documentation: https://cryocalc.readthedocs.io/
-- Issues: https://github.com/cryocalc/cryocalc/issues
+- Issues: https://github.com/circuitqed/cryocalc/issues
 - Email: support@cryocalc.com

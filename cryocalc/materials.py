@@ -102,18 +102,22 @@ class MaterialDatabase:
         
         return properties[property_name]
     
-    def search_materials_by_property(self, property_type: PropertyType) -> List[str]:
+    def search_materials_by_property(self, property_type) -> List[str]:
         """
         Find materials that have data for a specific property type.
         
         Args:
-            property_type: Type of property to search for
+            property_type: Type of property to search for (PropertyType enum or string)
             
         Returns:
             List of material IDs that have the specified property
         """
         matching_materials = []
-        property_name = property_type.value
+        # Handle both PropertyType enum and string inputs
+        if hasattr(property_type, 'value'):
+            property_name = property_type.value
+        else:
+            property_name = property_type
         
         for material_id, material_data in self._materials_data.items():
             properties = material_data.get('properties', {})

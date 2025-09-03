@@ -214,12 +214,12 @@ class MaterialCalculator:
             'properties': properties_with_ranges
         }
     
-    def list_materials_with_property(self, property_type: PropertyType) -> List[Dict[str, str]]:
+    def list_materials_with_property(self, property_type) -> List[Dict[str, str]]:
         """
         List all materials that have a specific property type.
         
         Args:
-            property_type: Type of property to search for
+            property_type: Type of property to search for (PropertyType enum or string)
             
         Returns:
             List of dictionaries with material_id and name

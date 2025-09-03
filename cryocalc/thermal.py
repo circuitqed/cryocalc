@@ -110,17 +110,18 @@ class CustomGeometry(Geometry):
         return f"{self.description_text}: A={self.area*1e6:.2f}mm² × {self.length*1000:.1f}mm"
 
 
-class ThermalConductanceCalculator:
+class ThermalCalculator:
     """
-    Calculator for thermal conductance and heat transfer calculations.
+    Calculator for thermal conductivity integration and thermal resistance analysis.
     
-    Thermal conductance G = ∫(k(T) * A / L) dT for temperature-dependent k(T)
-    Heat flow Q = G * ΔT for small temperature differences
+    Provides physically meaningful thermal analysis:
+    - Thermal conductivity integration: ∫k(T)dT over temperature ranges
+    - Thermal resistance integration: ∫(1/k(T))dT for heat transfer analysis
     """
     
     def __init__(self, material_calculator: Optional[MaterialCalculator] = None):
         """
-        Initialize thermal conductance calculator.
+        Initialize thermal calculator.
         
         Args:
             material_calculator: MaterialCalculator instance. If None, creates new one.
@@ -172,13 +173,15 @@ class ThermalConductanceCalculator:
         
         return integral
     
-    def calculate_thermal_conductance(self, material_id: str, geometry: Geometry,
-                                    temp_low: float, temp_high: float,
-                                    num_points: int = 100) -> float:
+    def calculate_thermal_resistance_integral(self, material_id: str, geometry: Geometry,
+                                            temp_low: float, temp_high: float,
+                                            num_points: int = 100) -> float:
         """
-        Calculate thermal conductance for given geometry and temperature range.
+        Calculate thermal resistance integral for given geometry and temperature range.
         
-        G = (A/L) * ∫[T1 to T2] k(T) dT / (T2 - T1)
+        R_integral = (L/A) * ∫[T1 to T2] 1/k(T) dT
+        
+        This is the physically meaningful quantity for thermal analysis.
         
         Args:
             material_id: Material identifier
@@ -188,53 +191,40 @@ class ThermalConductanceCalculator:
             num_points: Number of integration points
             
         Returns:
-            Thermal conductance in W/K
+            Thermal resistance integral in K/W
         """
-        # Calculate thermal conductivity integral
-        k_integral = self.calculate_thermal_conductivity_integral(
-            material_id, temp_low, temp_high, num_points
+        # Validate temperature range
+        temp_range = self.calculator.database.get_temperature_range(
+            material_id, "thermal_conductivity"
         )
+        if temp_low < temp_range[0] or temp_high > temp_range[1]:
+            raise ValueError(
+                f"Temperature range [{temp_low}, {temp_high}]K outside valid range "
+                f"[{temp_range[0]}, {temp_range[1]}]K for {material_id}"
+            )
         
-        # Calculate average thermal conductivity
-        k_avg = k_integral / (temp_high - temp_low)
+        if temp_low >= temp_high:
+            raise ValueError("temp_low must be less than temp_high")
         
-        # Calculate conductance: G = k_avg * A / L
+        # Create temperature array
+        temperatures = np.linspace(temp_low, temp_high, num_points)
+        
+        # Calculate 1/k(T) at each temperature
+        inverse_conductivities = []
+        for temp in temperatures:
+            k = self.calculator.calculate_thermal_conductivity(material_id, temp)
+            if k <= 0:
+                raise ValueError(f"Invalid thermal conductivity {k} at {temp}K")
+            inverse_conductivities.append(1.0 / k)
+        
+        # Integrate using trapezoidal rule
+        resistance_integral = np.trapezoid(inverse_conductivities, temperatures)
+        
+        # Scale by geometry factor L/A
         area = geometry.cross_sectional_area()
-        conductance = k_avg * area / geometry.length
+        thermal_resistance_integral = (geometry.length / area) * resistance_integral
         
-        return conductance
-    
-    def calculate_thermal_power(self, material_id: str, geometry: Geometry,
-                               temp_hot: float, temp_cold: float,
-                               num_points: int = 100) -> float:
-        """
-        Calculate thermal power transfer between two temperatures.
-        
-        Q = G * ΔT where G is the thermal conductance
-        
-        Args:
-            material_id: Material identifier
-            geometry: Geometry specification
-            temp_hot: Hot side temperature (K)
-            temp_cold: Cold side temperature (K)
-            num_points: Number of integration points
-            
-        Returns:
-            Thermal power in Watts
-        """
-        if temp_hot <= temp_cold:
-            raise ValueError("temp_hot must be greater than temp_cold")
-        
-        # Calculate thermal conductance
-        conductance = self.calculate_thermal_conductance(
-            material_id, geometry, temp_cold, temp_hot, num_points
-        )
-        
-        # Calculate power: Q = G * ΔT
-        delta_t = temp_hot - temp_cold
-        power = conductance * delta_t
-        
-        return power
+        return thermal_resistance_integral
     
     def calculate_temperature_profile(self, material_id: str, geometry: Geometry,
                                     temp_hot: float, temp_cold: float,
@@ -281,19 +271,16 @@ class ThermalConductanceCalculator:
         material_info = self.calculator.database._materials_data[material_id]
         
         # Calculate thermal properties
-        conductance = self.calculate_thermal_conductance(
+        resistance_integral = self.calculate_thermal_resistance_integral(
             material_id, geometry, temp_cold, temp_hot, num_points
         )
-        power = self.calculate_thermal_power(
-            material_id, geometry, temp_hot, temp_cold, num_points
+        k_integral = self.calculate_thermal_conductivity_integral(
+            material_id, temp_cold, temp_hot, num_points
         )
         
         # Calculate thermal conductivities at endpoints
         k_hot = self.calculator.calculate_thermal_conductivity(material_id, temp_hot)
         k_cold = self.calculator.calculate_thermal_conductivity(material_id, temp_cold)
-        
-        # Calculate thermal resistance
-        resistance = 1.0 / conductance if conductance > 0 else float('inf')
         
         summary = {
             'material': {
@@ -317,10 +304,9 @@ class ThermalConductanceCalculator:
                 'ratio': k_hot / k_cold if k_cold > 0 else float('inf')
             },
             'results': {
-                'thermal_conductance_W_per_K': conductance,
-                'thermal_resistance_K_per_W': resistance,
-                'thermal_power_W': power,
-                'heat_flux_W_per_m2': power / geometry.cross_sectional_area()
+                'thermal_resistance_integral_K_per_W': resistance_integral,
+                'thermal_conductivity_integral_W_K_per_m_K': k_integral,
+                'average_thermal_conductivity_W_per_m_K': k_integral / (temp_hot - temp_cold)
             }
         }
         

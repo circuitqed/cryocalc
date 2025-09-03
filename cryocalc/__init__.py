@@ -13,8 +13,7 @@ from .properties import PropertyType, EquationType, PropertyCalculator
 from .materials import MaterialDatabase
 from .calculator import MaterialCalculator
 from .thermal import (
-    ThermalConductanceCalculator,
-    GeometryType,
+    ThermalCalculator,
     Geometry,
     RodGeometry,
     TubeGeometry,
@@ -35,14 +34,14 @@ __email__ = "support@cryocalc.org"
 __all__ = [
     'PropertyType',
     'EquationType', 
-    'PropertyCalculator',
-    'MaterialDatabase',
     'MaterialCalculator',
-    'ThermalConductanceCalculator',
-    'GeometryType',
+    'MaterialDatabase',
+    'PropertyType',
+    'EquationType',
+    'ThermalCalculator',
     'Geometry',
     'RodGeometry',
-    'TubeGeometry',
+    'TubeGeometry', 
     'BarGeometry',
     'CustomGeometry',
     'create_rod',

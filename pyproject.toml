@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.19.0",
     "matplotlib>=3.3.0",
+    "scipy>=1.7.0",
 ]
 
 [project.optional-dependencies]
@@ -47,10 +48,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/cryocalc/cryocalc"
+Homepage = "https://github.com/circuitqed/cryocalc"
 Documentation = "https://cryocalc.readthedocs.io/"
-Repository = "https://github.com/cryocalc/cryocalc.git"
-"Bug Tracker" = "https://github.com/cryocalc/cryocalc/issues"
+Repository = "https://github.com/circuitqed/cryocalc.git"
+"Bug Tracker" = "https://github.com/circuitqed/cryocalc/issues"
 
 [project.scripts]
 cryocalc = "cryocalc.cli:main"

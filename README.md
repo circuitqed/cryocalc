@@ -6,6 +6,8 @@ A professional Python package for calculating thermal conductivity, specific hea
 
 - **Comprehensive Material Database**: Includes data for aluminum alloys, stainless steels, copper, composites, and other cryogenic materials
 - **Multiple Property Types**: Calculate thermal conductivity, specific heat, Young's modulus, and linear expansion
+- **Advanced Thermal Analysis**: Thermal conductivity integration, conductance calculations, and geometry-specific heat transfer
+- **Standard Geometries**: Support for rods, wires, tubes, bars, and custom shapes with thermal analysis
 - **Temperature Range Validation**: Ensures calculations are within valid temperature ranges for each material
 - **Professional API**: Clean, well-documented Python interface
 - **Command-Line Interface**: Easy-to-use CLI for quick calculations
@@ -56,6 +58,31 @@ print(f"Material: {info['name']}")
 print(f"Available properties: {list(info['properties'].keys())}")
 ```
 
+### Thermal Analysis
+
+```python
+from cryocalc import ThermalConductanceCalculator, create_rod, create_tube
+
+# Initialize thermal calculator
+thermal_calc = ThermalConductanceCalculator()
+
+# Create geometries
+rod = create_rod(diameter_mm=10, length_mm=100)
+tube = create_tube(outer_diameter_mm=25.4, wall_thickness_mm=1.6, length_mm=1000)
+
+# Calculate thermal conductance
+conductance = thermal_calc.calculate_thermal_conductance("aluminum_6061_t6", rod, 77, 300)
+print(f"Thermal conductance: {conductance:.6f} W/K")
+
+# Calculate thermal power (heat transfer)
+power = thermal_calc.calculate_thermal_power("stainless_steel_304", tube, 300, 4.2)
+print(f"Heat leak: {power:.3f} W")
+
+# Thermal conductivity integration
+integral = thermal_calc.calculate_thermal_conductivity_integral("copper_ofhc_rrr100", 77, 300)
+print(f"k(T) integral: {integral:.1f} W·K/m·K")
+```
+
 ### Command-Line Interface
 
 ```bash
@@ -99,10 +126,17 @@ cryocalc calculate fiberglass_epoxy_g10 thermal_conductivity 100 --variant norma
 
 ## Property Types
 
+### Basic Material Properties
 - **Thermal Conductivity** (W/m-K): Heat conduction capability
 - **Specific Heat** (J/kg-K): Heat capacity per unit mass
 - **Young's Modulus** (GPa): Elastic modulus
 - **Linear Expansion** (10⁻⁵ m/m): Thermal expansion coefficient
+
+### Advanced Thermal Analysis
+- **Thermal Conductance** (W/K): G = k_avg × A / L for specific geometries
+- **Thermal Power** (W): Heat transfer Q = G × ΔT between temperatures
+- **Thermal Integration**: ∫k(T)dT over temperature ranges
+- **Geometry Support**: Rods, wires, tubes, bars, and custom shapes
 
 ## Temperature Ranges
 

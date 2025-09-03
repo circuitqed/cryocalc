@@ -238,3 +238,30 @@ class MaterialCalculator:
                 continue
         
         return materials
+    
+    def list_all_materials(self) -> List[Dict[str, any]]:
+        """
+        List all materials with their supported properties.
+        
+        Returns:
+            List of dictionaries with material_id, name, and supported properties
+        """
+        all_materials = []
+        
+        for material_id in self.database.get_available_materials():
+            try:
+                info = self.database.get_material_info(material_id)
+                properties = info.get('properties', [])
+                
+                all_materials.append({
+                    'material_id': material_id,
+                    'name': info['name'],
+                    'properties': properties,
+                    'property_count': len(properties)
+                })
+            except ValueError:
+                continue
+        
+        # Sort by name for consistent output
+        all_materials.sort(key=lambda x: x['name'])
+        return all_materials

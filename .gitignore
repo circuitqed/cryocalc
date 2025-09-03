@@ -140,3 +140,4 @@ dmypy.json
 # Temporary files
 *.tmp
 temp/
+src/

@@ -382,3 +382,175 @@ class TestEdgeCases:
             self.calc.calculate_thermal_power(
                 "nonexistent_material", rod, 300.0, 77.0
             )
+
+
+class TestTemperatureProfileValidation:
+    """Test that temperature profile solutions satisfy the governing ODE."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.calc = ThermalCalculator()
+    
+    def test_temperature_profile_satisfies_ode_copper(self):
+        """Test that temperature profile satisfies dT/dx = -Q/(A*k(T)) for copper."""
+        # Test case: copper rod
+        rod = create_rod(diameter_mm=10, length_mm=100)
+        material = "copper_ofhc_rrr100"
+        temp_hot, temp_cold = 300.0, 77.0
+        
+        # Calculate temperature profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, rod, temp_hot=temp_hot, temp_cold=temp_cold, num_points=20
+        )
+        
+        # Calculate thermal power
+        power = self.calc.calculate_thermal_power(material, rod, temp_hot, temp_cold)
+        area = rod.cross_sectional_area()
+        
+        # Verify ODE: dT/dx = -Q/(A*k(T))
+        # Calculate numerical derivative dT/dx
+        for i in range(1, len(positions) - 1):
+            # Central difference for dT/dx
+            dt_dx_numerical = (temperatures[i+1] - temperatures[i-1]) / (positions[i+1] - positions[i-1])
+            
+            # Calculate theoretical dT/dx = -Q/(A*k(T))
+            k_T = self.calc.calculator.calculate_thermal_conductivity(material, temperatures[i])
+            dt_dx_theoretical = -power / (area * k_T)
+            
+            # Check that numerical and theoretical derivatives match within tolerance
+            relative_error = abs(dt_dx_numerical - dt_dx_theoretical) / abs(dt_dx_theoretical)
+            assert relative_error < 0.1, f"ODE not satisfied at x={positions[i]:.3f}m: numerical={dt_dx_numerical:.3f}, theoretical={dt_dx_theoretical:.3f}, error={relative_error:.3f}"
+    
+    def test_temperature_profile_satisfies_ode_aluminum(self):
+        """Test that temperature profile satisfies dT/dx = -Q/(A*k(T)) for aluminum."""
+        # Test case: aluminum rod
+        rod = create_rod(diameter_mm=8, length_mm=50)
+        material = "aluminum_6061_t6"
+        temp_hot, temp_cold = 300.0, 77.0
+        
+        # Calculate temperature profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, rod, temp_hot=temp_hot, temp_cold=temp_cold, num_points=15
+        )
+        
+        # Calculate thermal power
+        power = self.calc.calculate_thermal_power(material, rod, temp_hot, temp_cold)
+        area = rod.cross_sectional_area()
+        
+        # Verify ODE: dT/dx = -Q/(A*k(T))
+        for i in range(1, len(positions) - 1):
+            dt_dx_numerical = (temperatures[i+1] - temperatures[i-1]) / (positions[i+1] - positions[i-1])
+            k_T = self.calc.calculator.calculate_thermal_conductivity(material, temperatures[i])
+            dt_dx_theoretical = -power / (area * k_T)
+            
+            relative_error = abs(dt_dx_numerical - dt_dx_theoretical) / abs(dt_dx_theoretical)
+            assert relative_error < 0.1, f"ODE not satisfied at x={positions[i]:.3f}m: error={relative_error:.3f}"
+    
+    def test_temperature_profile_satisfies_ode_stainless_steel(self):
+        """Test that temperature profile satisfies dT/dx = -Q/(A*k(T)) for stainless steel."""
+        # Test case: stainless steel tube (lower thermal conductivity)
+        tube = create_tube(outer_diameter_mm=20, wall_thickness_mm=2, length_mm=200)
+        material = "stainless_steel_304"
+        temp_hot, temp_cold = 300.0, 4.2
+        
+        # Calculate temperature profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, tube, temp_hot=temp_hot, temp_cold=temp_cold, num_points=25
+        )
+        
+        # Calculate thermal power
+        power = self.calc.calculate_thermal_power(material, tube, temp_hot, temp_cold)
+        area = tube.cross_sectional_area()
+        
+        # Verify ODE: dT/dx = -Q/(A*k(T))
+        # Skip points near the ends where numerical derivatives are less accurate
+        errors = []
+        for i in range(2, len(positions) - 3):  # Skip first/last few points
+            dt_dx_numerical = (temperatures[i+1] - temperatures[i-1]) / (positions[i+1] - positions[i-1])
+            k_T = self.calc.calculator.calculate_thermal_conductivity(material, temperatures[i])
+            dt_dx_theoretical = -power / (area * k_T)
+            
+            relative_error = abs(dt_dx_numerical - dt_dx_theoretical) / abs(dt_dx_theoretical)
+            errors.append(relative_error)
+        
+        # Check that most points satisfy the ODE within tolerance
+        good_points = sum(1 for error in errors if error < 0.2)
+        total_points = len(errors)
+        success_rate = good_points / total_points
+        
+        assert success_rate > 0.8, f"ODE not satisfied for {material}: {good_points}/{total_points} points within tolerance"
+    
+    def test_temperature_profile_with_power_input(self):
+        """Test temperature profile when thermal power is specified instead of cold temperature."""
+        rod = create_rod(diameter_mm=6, length_mm=75)
+        material = "copper_ofhc_rrr100"
+        temp_hot = 300.0
+        specified_power = 50.0  # Watts
+        
+        # Calculate temperature profile with specified power
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, rod, temp_hot=temp_hot, thermal_power=specified_power, num_points=15
+        )
+        
+        area = rod.cross_sectional_area()
+        
+        # Verify ODE: dT/dx = -Q/(A*k(T)) using the specified power
+        for i in range(1, len(positions) - 1):
+            dt_dx_numerical = (temperatures[i+1] - temperatures[i-1]) / (positions[i+1] - positions[i-1])
+            k_T = self.calc.calculator.calculate_thermal_conductivity(material, temperatures[i])
+            dt_dx_theoretical = -specified_power / (area * k_T)
+            
+            relative_error = abs(dt_dx_numerical - dt_dx_theoretical) / abs(dt_dx_theoretical)
+            assert relative_error < 0.1, f"ODE not satisfied at x={positions[i]:.3f}m: error={relative_error:.3f}"
+    
+    def test_boundary_conditions(self):
+        """Test that boundary conditions are satisfied."""
+        rod = create_rod(diameter_mm=12, length_mm=150)
+        material = "aluminum_6061_t6"
+        temp_hot, temp_cold = 300.0, 77.0
+        
+        # Calculate temperature profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, rod, temp_hot=temp_hot, temp_cold=temp_cold, num_points=10
+        )
+        
+        # Check boundary conditions
+        assert abs(temperatures[0] - temp_hot) < 1e-10, f"Hot boundary not satisfied: {temperatures[0]} != {temp_hot}"
+        assert abs(temperatures[-1] - temp_cold) < 5.0, f"Cold boundary not satisfied: {temperatures[-1]} != {temp_cold}"
+        
+        # Check monotonic decrease
+        for i in range(len(temperatures) - 1):
+            assert temperatures[i] >= temperatures[i+1], f"Temperature not monotonically decreasing at index {i}"
+    
+    def test_conservation_of_energy(self):
+        """Test that energy conservation is satisfied along the profile."""
+        rod = create_rod(diameter_mm=8, length_mm=100)
+        material = "copper_ofhc_rrr100"
+        temp_hot, temp_cold = 300.0, 77.0
+        
+        # Calculate temperature profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            material, rod, temp_hot=temp_hot, temp_cold=temp_cold, num_points=20
+        )
+        
+        # Calculate thermal power
+        power_expected = self.calc.calculate_thermal_power(material, rod, temp_hot, temp_cold)
+        area = rod.cross_sectional_area()
+        
+        # Check that Q = -A*k*dT/dx is constant along the profile
+        powers = []
+        for i in range(1, len(positions) - 1):
+            dt_dx = (temperatures[i+1] - temperatures[i-1]) / (positions[i+1] - positions[i-1])
+            k_T = self.calc.calculator.calculate_thermal_conductivity(material, temperatures[i])
+            power_local = -area * k_T * dt_dx
+            powers.append(power_local)
+        
+        # Check that power is approximately constant
+        power_mean = np.mean(powers)
+        power_std = np.std(powers)
+        
+        # Power should be close to expected value
+        assert abs(power_mean - power_expected) / power_expected < 0.1, f"Mean power {power_mean:.3f} != expected {power_expected:.3f}"
+        
+        # Power variation should be small (conservation of energy)
+        assert power_std / power_mean < 0.1, f"Power variation too large: std/mean = {power_std/power_mean:.3f}"

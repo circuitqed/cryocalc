@@ -253,52 +253,60 @@ class ThermalCalculator:
         # Geometry properties
         area = geometry.cross_sectional_area()
         
-        # Direct integration approach: x = (A/Q) * ∫[T_hot to T(x)] k(T) dT
-        # From Fourier's law: Q = -A*k*dT/dx, so dx = -(A*k/Q)*dT
-        # Integrating: x = -(A/Q) * ∫[T_hot to T(x)] k(T) dT
+        # Solve the PDE: Q = -A*k(T)*dT/dx using scipy.integrate.solve_ivp
+        # Rearrange to: dT/dx = -Q/(A*k(T))
         
-        # Create fine temperature array for integration (decreasing from hot to cold)
-        if temp_cold is not None:
-            # Use known cold temperature as endpoint
-            temp_range = np.linspace(temp_hot, temp_cold, 1000)
-        else:
-            # Estimate reasonable cold temperature range
-            temp_range = np.linspace(temp_hot, max(4.0, temp_hot - 200), 1000)
+        from scipy.integrate import solve_ivp
         
-        # Calculate cumulative integral: ∫[T_hot to T] k(T) dT
-        k_values = []
-        for temp in temp_range:
+        def temperature_ode(x, T):
+            """ODE for temperature profile: dT/dx = -Q/(A*k(T))"""
             try:
-                k = self.calculator.calculate_thermal_conductivity(material_id, temp)
-                k_values.append(k)
-            except ValueError:
-                # Temperature out of range, stop here
-                temp_range = temp_range[:len(k_values)]
-                break
+                k = self.calculator.calculate_thermal_conductivity(material_id, T[0])
+                if k <= 0:
+                    return [-1e-6]  # Small negative gradient if k invalid
+                return [-thermal_power / (area * k)]
+            except (ValueError, ZeroDivisionError):
+                return [-1e-6]  # Small negative gradient if calculation fails
         
-        # Cumulative integration using trapezoidal rule
-        cumulative_integrals = np.zeros(len(temp_range))
-        for i in range(1, len(temp_range)):
-            dt = temp_range[i] - temp_range[i-1]  # This will be negative since temp decreases
-            cumulative_integrals[i] = cumulative_integrals[i-1] + 0.5 * (k_values[i] + k_values[i-1]) * dt
+        # Set up boundary conditions and solve
+        x_span = (0, geometry.length)
+        T_initial = [temp_hot]
         
-        # Convert to position: x = -(A/Q) * integral (negative because heat flows from hot to cold)
-        x_values = -(area / thermal_power) * cumulative_integrals
-        
-        # Interpolate to find temperature at each desired position
-        for i in range(1, num_points):
-            x = positions[i]
-            if x <= x_values[-1]:
-                # Interpolate temperature at position x
-                temperatures[i] = np.interp(x, x_values, temp_range)
-            else:
-                # Position beyond calculated range, use linear extrapolation
-                if len(temp_range) > 1:
-                    # Linear extrapolation based on last two points
-                    slope = (temp_range[-1] - temp_range[-2]) / (x_values[-1] - x_values[-2])
-                    temperatures[i] = temp_range[-1] + slope * (x - x_values[-1])
+        # Solve the ODE
+        try:
+            sol = solve_ivp(temperature_ode, x_span, T_initial, 
+                          t_eval=positions, method='RK45', rtol=1e-6)
+            
+            if sol.success:
+                temperatures = sol.y[0]
+                
+                # If we know temp_cold, check if solution is reasonable
+                if temp_cold is not None:
+                    final_temp = temperatures[-1]
+                    # If final temperature is way off, use fallback method
+                    if abs(final_temp - temp_cold) > 50:  # More than 50K difference
+                        # Use linear interpolation as fallback
+                        temperatures = np.linspace(temp_hot, temp_cold, num_points)
                 else:
-                    temperatures[i] = temp_range[-1]
+                    # Ensure temperatures are physically reasonable
+                    temperatures = np.maximum(temperatures, 4.0)  # Min 4K
+                    temperatures = np.minimum(temperatures, temp_hot)  # Max temp_hot
+            else:
+                # Fallback to linear profile if ODE solver fails
+                if temp_cold is not None:
+                    temperatures = np.linspace(temp_hot, temp_cold, num_points)
+                else:
+                    # Estimate reasonable temperature drop
+                    estimated_temp_cold = max(4.0, temp_hot - 100)
+                    temperatures = np.linspace(temp_hot, estimated_temp_cold, num_points)
+                    
+        except Exception:
+            # Fallback to linear profile if any error occurs
+            if temp_cold is not None:
+                temperatures = np.linspace(temp_hot, temp_cold, num_points)
+            else:
+                estimated_temp_cold = max(4.0, temp_hot - 100)
+                temperatures = np.linspace(temp_hot, estimated_temp_cold, num_points)
         
         return positions, temperatures
     

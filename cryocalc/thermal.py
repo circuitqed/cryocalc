@@ -253,46 +253,52 @@ class ThermalCalculator:
         # Geometry properties
         area = geometry.cross_sectional_area()
         
-        # For each position, solve: Q*x/A = ∫[T(x) to T_hot] k(T) dT
+        # Direct integration approach: x = (A/Q) * ∫[T_hot to T(x)] k(T) dT
+        # From Fourier's law: Q = -A*k*dT/dx, so dx = -(A*k/Q)*dT
+        # Integrating: x = -(A/Q) * ∫[T_hot to T(x)] k(T) dT
+        
+        # Create fine temperature array for integration (decreasing from hot to cold)
+        if temp_cold is not None:
+            # Use known cold temperature as endpoint
+            temp_range = np.linspace(temp_hot, temp_cold, 1000)
+        else:
+            # Estimate reasonable cold temperature range
+            temp_range = np.linspace(temp_hot, max(4.0, temp_hot - 200), 1000)
+        
+        # Calculate cumulative integral: ∫[T_hot to T] k(T) dT
+        k_values = []
+        for temp in temp_range:
+            try:
+                k = self.calculator.calculate_thermal_conductivity(material_id, temp)
+                k_values.append(k)
+            except ValueError:
+                # Temperature out of range, stop here
+                temp_range = temp_range[:len(k_values)]
+                break
+        
+        # Cumulative integration using trapezoidal rule
+        cumulative_integrals = np.zeros(len(temp_range))
+        for i in range(1, len(temp_range)):
+            dt = temp_range[i] - temp_range[i-1]  # This will be negative since temp decreases
+            cumulative_integrals[i] = cumulative_integrals[i-1] + 0.5 * (k_values[i] + k_values[i-1]) * dt
+        
+        # Convert to position: x = -(A/Q) * integral (negative because heat flows from hot to cold)
+        x_values = -(area / thermal_power) * cumulative_integrals
+        
+        # Interpolate to find temperature at each desired position
         for i in range(1, num_points):
             x = positions[i]
-            target_integral = thermal_power * x / area
-            
-            # Find temperature T(x) such that ∫[T(x) to T_hot] k(T) dT = target_integral
-            # Use iterative solver (bisection method)
-            t_low = 4.0  # Minimum reasonable temperature
-            t_high = temp_hot
-            tolerance = 1e-6
-            max_iterations = 100
-            
-            for iteration in range(max_iterations):
-                t_mid = (t_low + t_high) / 2
-                
-                # Calculate integral from t_mid to temp_hot
-                try:
-                    integral = self.calculate_thermal_conductivity_integral(
-                        material_id, t_mid, temp_hot, 50
-                    )
-                except ValueError:
-                    # Temperature out of range, adjust bounds
-                    t_low = t_mid
-                    continue
-                
-                if abs(integral - target_integral) < tolerance:
-                    temperatures[i] = t_mid
-                    break
-                elif integral > target_integral:
-                    t_high = t_mid
-                else:
-                    t_low = t_mid
+            if x <= x_values[-1]:
+                # Interpolate temperature at position x
+                temperatures[i] = np.interp(x, x_values, temp_range)
             else:
-                # If convergence failed, use linear interpolation as fallback
-                if temp_cold is not None:
-                    temperatures[i] = temp_hot - (temp_hot - temp_cold) * x / geometry.length
+                # Position beyond calculated range, use linear extrapolation
+                if len(temp_range) > 1:
+                    # Linear extrapolation based on last two points
+                    slope = (temp_range[-1] - temp_range[-2]) / (x_values[-1] - x_values[-2])
+                    temperatures[i] = temp_range[-1] + slope * (x - x_values[-1])
                 else:
-                    # Estimate temp_cold from thermal power and use linear approximation
-                    estimated_temp_cold = temp_hot - 50  # Conservative estimate
-                    temperatures[i] = temp_hot - (temp_hot - estimated_temp_cold) * x / geometry.length
+                    temperatures[i] = temp_range[-1]
         
         return positions, temperatures
     

@@ -226,6 +226,39 @@ class ThermalCalculator:
         
         return thermal_resistance_integral
     
+    def calculate_thermal_power(self, material_id: str, geometry: Geometry,
+                               temp_hot: float, temp_cold: float,
+                               num_points: int = 100) -> float:
+        """
+        Calculate thermal power transfer between two temperatures using resistance integral.
+        
+        For steady-state heat transfer: Q = ΔT / R_thermal
+        where R_thermal = (L/A) * ∫[1/k(T)]dT
+        
+        Args:
+            material_id: Material identifier
+            geometry: Geometry specification
+            temp_hot: Hot side temperature (K)
+            temp_cold: Cold side temperature (K)
+            num_points: Number of integration points
+            
+        Returns:
+            Thermal power in Watts
+        """
+        if temp_hot <= temp_cold:
+            raise ValueError("temp_hot must be greater than temp_cold")
+        
+        # Calculate thermal resistance integral
+        resistance_integral = self.calculate_thermal_resistance_integral(
+            material_id, geometry, temp_cold, temp_hot, num_points
+        )
+        
+        # Calculate power: Q = ΔT / R
+        delta_t = temp_hot - temp_cold
+        power = delta_t / resistance_integral
+        
+        return power
+    
     def calculate_temperature_profile(self, material_id: str, geometry: Geometry,
                                     temp_hot: float, temp_cold: float,
                                     num_points: int = 50) -> Tuple[np.ndarray, np.ndarray]:

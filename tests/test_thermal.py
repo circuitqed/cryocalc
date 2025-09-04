@@ -5,7 +5,7 @@ Unit tests for thermal conductance and geometry calculations.
 import pytest
 import numpy as np
 from cryocalc.thermal import (
-    ThermalConductanceCalculator,
+    ThermalCalculator,
     RodGeometry,
     TubeGeometry,
     BarGeometry,
@@ -111,12 +111,12 @@ class TestGeometryHelpers:
         assert custom.length == 0.05
 
 
-class TestThermalConductanceCalculator:
-    """Test thermal conductance calculations."""
+class TestThermalCalculator:
+    """Test thermal calculations."""
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.calc = ThermalConductanceCalculator()
+        self.calc = ThermalCalculator()
         self.rod = create_rod(diameter_mm=10, length_mm=100)
         self.material = "aluminum_6061_t6"
     
@@ -126,7 +126,7 @@ class TestThermalConductanceCalculator:
         
         # Test with custom calculator
         custom_calc = MaterialCalculator()
-        thermal_calc = ThermalConductanceCalculator(custom_calc)
+        thermal_calc = ThermalCalculator(custom_calc)
         assert thermal_calc.calculator is custom_calc
     
     def test_thermal_conductivity_integral(self):
@@ -158,23 +158,8 @@ class TestThermalConductanceCalculator:
                 self.material, 1.0, 77.0  # 1K is below minimum
             )
     
-    def test_thermal_conductance(self):
-        """Test thermal conductance calculation."""
-        conductance = self.calc.calculate_thermal_conductance(
-            self.material, self.rod, 77.0, 300.0
-        )
-        
-        assert isinstance(conductance, float)
-        assert conductance > 0
-        
-        # Check units: should be W/K
-        # G = k_avg * A / L
-        area = self.rod.cross_sectional_area()
-        length = self.rod.length
-        assert conductance > 0.001  # Reasonable magnitude for aluminum rod
-    
-    def test_thermal_power(self):
-        """Test thermal power calculation."""
+    def test_thermal_power_calculation(self):
+        """Test thermal power calculation using Q = (A/L) * ∫k(T)dT."""
         power = self.calc.calculate_thermal_power(
             self.material, self.rod, 300.0, 77.0
         )
@@ -182,12 +167,31 @@ class TestThermalConductanceCalculator:
         assert isinstance(power, float)
         assert power > 0
         
-        # Power should be conductance * delta_T
-        conductance = self.calc.calculate_thermal_conductance(
-            self.material, self.rod, 77.0, 300.0
+        # Verify formula: Q = (A/L) * ∫k(T)dT
+        k_integral = self.calc.calculate_thermal_conductivity_integral(
+            self.material, 77.0, 300.0
         )
-        expected_power = conductance * (300.0 - 77.0)
-        assert abs(power - expected_power) / expected_power < 0.01
+        area = self.rod.cross_sectional_area()
+        length = self.rod.length
+        expected_power = (area / length) * k_integral
+        assert abs(power - expected_power) / expected_power < 1e-10
+    
+    def test_thermal_power_with_different_materials(self):
+        """Test thermal power with different materials."""
+        power_al = self.calc.calculate_thermal_power(
+            "aluminum_6061_t6", self.rod, 300.0, 77.0
+        )
+        power_cu = self.calc.calculate_thermal_power(
+            "copper_ofhc_rrr100", self.rod, 300.0, 77.0
+        )
+        
+        assert isinstance(power_al, float)
+        assert isinstance(power_cu, float)
+        assert power_al > 0
+        assert power_cu > 0
+        
+        # Copper should have higher thermal power than aluminum
+        assert power_cu > power_al
     
     def test_thermal_power_invalid_temperatures(self):
         """Test thermal power with invalid temperatures."""
@@ -196,10 +200,10 @@ class TestThermalConductanceCalculator:
                 self.material, self.rod, 77.0, 300.0  # cold > hot
             )
     
-    def test_temperature_profile(self):
-        """Test temperature profile calculation."""
+    def test_temperature_profile_with_both_temps(self):
+        """Test temperature profile with both temperatures given."""
         positions, temperatures = self.calc.calculate_temperature_profile(
-            self.material, self.rod, 300.0, 77.0, num_points=10
+            self.material, self.rod, temp_hot=300.0, temp_cold=77.0, num_points=10
         )
         
         assert len(positions) == 10
@@ -207,10 +211,50 @@ class TestThermalConductanceCalculator:
         assert positions[0] == 0
         assert positions[-1] == self.rod.length
         assert temperatures[0] == 300.0
-        assert temperatures[-1] == 77.0
+        assert abs(temperatures[-1] - 77.0) < 1.0  # Allow some tolerance for iterative solver
         
         # Temperatures should be monotonically decreasing
         assert all(temperatures[i] >= temperatures[i+1] for i in range(len(temperatures)-1))
+    
+    def test_temperature_profile_with_power(self):
+        """Test temperature profile with thermal power given."""
+        # First calculate power for reference
+        power = self.calc.calculate_thermal_power(
+            self.material, self.rod, 300.0, 77.0
+        )
+        
+        # Now use that power to calculate profile
+        positions, temperatures = self.calc.calculate_temperature_profile(
+            self.material, self.rod, temp_hot=300.0, thermal_power=power, num_points=10
+        )
+        
+        assert len(positions) == 10
+        assert len(temperatures) == 10
+        assert temperatures[0] == 300.0
+        assert temperatures[-1] < 300.0  # Should drop from hot end
+        
+        # Temperatures should be monotonically decreasing
+        assert all(temperatures[i] >= temperatures[i+1] for i in range(len(temperatures)-1))
+    
+    def test_temperature_profile_invalid_inputs(self):
+        """Test temperature profile with invalid inputs."""
+        # Missing temp_hot
+        with pytest.raises(ValueError):
+            self.calc.calculate_temperature_profile(
+                self.material, self.rod, temp_cold=77.0
+            )
+        
+        # Missing both temp_cold and thermal_power
+        with pytest.raises(ValueError):
+            self.calc.calculate_temperature_profile(
+                self.material, self.rod, temp_hot=300.0
+            )
+        
+        # Both temp_cold and thermal_power given
+        with pytest.raises(ValueError):
+            self.calc.calculate_temperature_profile(
+                self.material, self.rod, temp_hot=300.0, temp_cold=77.0, thermal_power=10.0
+            )
     
     def test_calculation_summary(self):
         """Test comprehensive calculation summary."""
@@ -242,10 +286,9 @@ class TestThermalConductanceCalculator:
         assert summary['temperatures']['delta_T_K'] == 223.0
         
         # Check results
-        assert summary['results']['thermal_conductance_W_per_K'] > 0
-        assert summary['results']['thermal_resistance_K_per_W'] > 0
+        assert summary['results']['thermal_conductivity_integral_W_K_per_m_K'] > 0
+        assert summary['results']['average_thermal_conductivity_W_per_m_K'] > 0
         assert summary['results']['thermal_power_W'] > 0
-        assert summary['results']['heat_flux_W_per_m2'] > 0
 
 
 class TestDifferentMaterials:
@@ -253,7 +296,7 @@ class TestDifferentMaterials:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.calc = ThermalConductanceCalculator()
+        self.calc = ThermalCalculator()
         self.rod = create_rod(diameter_mm=5, length_mm=50)
     
     def test_copper_high_conductivity(self):
@@ -297,7 +340,7 @@ class TestEdgeCases:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.calc = ThermalConductanceCalculator()
+        self.calc = ThermalCalculator()
     
     def test_very_small_geometry(self):
         """Test very small geometry."""

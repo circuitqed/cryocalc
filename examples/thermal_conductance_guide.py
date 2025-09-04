@@ -10,10 +10,8 @@ and geometry-specific heat transfer analysis.
 Author: CryoCalc Development Team
 """
 
-from cryocalc import (
-    ThermalConductanceCalculator,
-    create_rod, create_wire, create_tube, create_bar, create_custom
-)
+from cryocalc import (MaterialCalculator, ThermalCalculator,
+                     create_rod, create_wire, create_tube, create_bar, create_custom)
 import numpy as np
 
 def main():
@@ -21,7 +19,7 @@ def main():
     print("=" * 60)
     
     # Initialize thermal calculator
-    calc = ThermalConductanceCalculator()
+    calc = ThermalCalculator()
     
     # Example 1: Basic Thermal Conductance
     print("\n1. Basic Thermal Conductance Calculation")
@@ -31,17 +29,15 @@ def main():
     copper_rod = create_rod(diameter_mm=6, length_mm=100)
     material = "copper_ofhc_rrr100"
     
-    # Calculate conductance and power
-    conductance = calc.calculate_thermal_conductance(material, copper_rod, 77, 300)
+    # Calculate thermal power and conductivity integral
     power = calc.calculate_thermal_power(material, copper_rod, 300, 77)
-    resistance = 1.0 / conductance
+    k_integral = calc.calculate_thermal_conductivity_integral(material, 77, 300)
     
     print(f"Material: Copper OFHC RRR=100")
     print(f"Geometry: {copper_rod.description()}")
     print(f"Temperature range: 77K to 300K")
-    print(f"Thermal conductance: {conductance:.4f} W/K")
+    print(f"Thermal conductivity integral: {k_integral:.1f} W·K/m·K")
     print(f"Thermal power (300K→77K): {power:.2f} W")
-    print(f"Thermal resistance: {resistance:.2f} K/W")
     
     # Example 2: Material Comparison
     print("\n2. Material Comparison")
@@ -59,13 +55,13 @@ def main():
     print(f"Temperature: 300K → 77K")
     print()
     print("Material Comparison:")
-    print("Material                | Power (W) | Conductance (W/K)")
+    print(f"Material         | Power (W) | k Integral (W·K/m·K)")
     print("-" * 55)
     
     for mat_id, mat_name in materials:
         power = calc.calculate_thermal_power(mat_id, rod, 300, 77)
-        conductance = calc.calculate_thermal_conductance(mat_id, rod, 77, 300)
-        print(f"{mat_name:22s} | {power:8.3f} | {conductance:12.6f}")
+        k_integral = calc.calculate_thermal_conductivity_integral(mat_id, 77, 300)
+        print(f"{mat_name:22s} | {power:8.3f} | {k_integral:15.1f}")
     
     # Example 3: Geometry Comparison
     print("\n3. Geometry Comparison")
@@ -144,10 +140,10 @@ def main():
     print(f"  Ratio: {summary['thermal_conductivity']['ratio']:.1f}:1")
     print()
     print("Thermal Performance:")
-    print(f"  Conductance: {summary['results']['thermal_conductance_W_per_K']:.6f} W/K")
-    print(f"  Resistance: {summary['results']['thermal_resistance_K_per_W']:.1f} K/W")
     print(f"  Heat leak: {summary['results']['thermal_power_W']:.3f} W")
-    print(f"  Heat flux: {summary['results']['heat_flux_W_per_m2']:.0f} W/m²")
+    area_m2 = summary['geometry']['area_mm2'] / 1e6
+    heat_flux = summary['results']['thermal_power_W'] / area_m2
+    print(f"  Heat flux: {heat_flux:.0f} W/m²")
     
     # Example 6: Temperature-Dependent Analysis
     print("\n6. Temperature-Dependent Analysis")
@@ -168,14 +164,14 @@ def main():
     print(f"Geometry: {rod.description()}")
     print()
     print("Temperature Range Analysis:")
-    print("Range (K)        | ΔT (K) | Power (W) | Conductance (W/K)")
+    print(f"Temp Range | ΔT (K) | Power (W) | k Integral (W·K/m·K)")
     print("-" * 60)
     
     for t_hot, t_cold, desc in temp_ranges:
         delta_t = t_hot - t_cold
         power = calc.calculate_thermal_power(material, rod, t_hot, t_cold)
-        conductance = calc.calculate_thermal_conductance(material, rod, t_cold, t_hot)
-        print(f"{t_hot:3.0f}K → {t_cold:4.1f}K | {delta_t:6.1f} | {power:8.4f} | {conductance:11.8f}")
+        k_integral = calc.calculate_thermal_conductivity_integral(material, t_cold, t_hot)
+        print(f"{t_hot:3.0f}K → {t_cold:4.1f}K | {delta_t:6.1f} | {power:8.4f} | {k_integral:15.1f}")
     
     # Example 7: Custom Geometry Application
     print("\n7. Custom Geometry Example")
@@ -190,15 +186,14 @@ def main():
     
     material = "copper_ofhc_rrr100"
     power = calc.calculate_thermal_power(material, custom_geom, 300.0, 77.0)
-    conductance = calc.calculate_thermal_conductance(material, custom_geom, 77.0, 300.0)
+    k_integral = calc.calculate_thermal_conductivity_integral(material, 77.0, 300.0)
     
     print(f"Application: Cryogenic Heat Sink Design")
     print(f"Material: Copper OFHC RRR=100")
     print(f"Geometry: {custom_geom.description()}")
     print(f"Temperature: 300K → 77K")
-    print(f"Thermal power: {power:.3f} W")
-    print(f"Thermal conductance: {conductance:.6f} W/K")
-    print(f"Thermal resistance: {1/conductance:.2f} K/W")
+    print(f"Thermal Power: {power:.3f} W")
+    print(f"Thermal Conductivity Integral: {k_integral:.1f} W·K/m·K")
     
     # Example 8: Design Guidelines
     print("\n8. Design Guidelines and Tips")

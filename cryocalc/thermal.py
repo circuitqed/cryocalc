@@ -173,71 +173,18 @@ class ThermalCalculator:
         
         return integral
     
-    def calculate_thermal_resistance_integral(self, material_id: str, geometry: Geometry,
-                                            temp_low: float, temp_high: float,
-                                            num_points: int = 100) -> float:
-        """
-        Calculate thermal resistance integral for given geometry and temperature range.
-        
-        R_integral = (L/A) * ∫[T1 to T2] 1/k(T) dT
-        
-        This is the physically meaningful quantity for thermal analysis.
-        
-        Args:
-            material_id: Material identifier
-            geometry: Geometry specification
-            temp_low: Lower temperature (K)
-            temp_high: Upper temperature (K)
-            num_points: Number of integration points
-            
-        Returns:
-            Thermal resistance integral in K/W
-        """
-        # Validate temperature range
-        temp_range = self.calculator.database.get_temperature_range(
-            material_id, "thermal_conductivity"
-        )
-        if temp_low < temp_range[0] or temp_high > temp_range[1]:
-            raise ValueError(
-                f"Temperature range [{temp_low}, {temp_high}]K outside valid range "
-                f"[{temp_range[0]}, {temp_range[1]}]K for {material_id}"
-            )
-        
-        if temp_low >= temp_high:
-            raise ValueError("temp_low must be less than temp_high")
-        
-        # Create temperature array
-        temperatures = np.linspace(temp_low, temp_high, num_points)
-        
-        # Calculate 1/k(T) at each temperature
-        inverse_conductivities = []
-        for temp in temperatures:
-            k = self.calculator.calculate_thermal_conductivity(material_id, temp)
-            if k <= 0:
-                raise ValueError(f"Invalid thermal conductivity {k} at {temp}K")
-            inverse_conductivities.append(1.0 / k)
-        
-        # Integrate using trapezoidal rule
-        resistance_integral = np.trapezoid(inverse_conductivities, temperatures)
-        
-        # Scale by geometry factor L/A
-        area = geometry.cross_sectional_area()
-        thermal_resistance_integral = (geometry.length / area) * resistance_integral
-        
-        return thermal_resistance_integral
-    
     def calculate_thermal_power(self, material_id: str, geometry: Geometry,
                                temp_hot: float, temp_cold: float,
                                num_points: int = 100) -> float:
         """
-        Calculate thermal power transfer between two temperatures using resistance integral.
+        Calculate thermal power transfer between two temperatures.
         
-        For steady-state heat transfer: Q = ΔT / R_thermal
-        where R_thermal = (L/A) * ∫[1/k(T)]dT
+        From conservation of energy and Fourier's law:
+        Q = (A/L) * ∫[T_cold to T_hot] k(T) dT
         
         Args:
             material_id: Material identifier
-            geometry: Geometry specification
+            geometry: Geometry specification (must have constant cross-section)
             temp_hot: Hot side temperature (K)
             temp_cold: Cold side temperature (K)
             num_points: Number of integration points
@@ -248,39 +195,104 @@ class ThermalCalculator:
         if temp_hot <= temp_cold:
             raise ValueError("temp_hot must be greater than temp_cold")
         
-        # Calculate thermal resistance integral
-        resistance_integral = self.calculate_thermal_resistance_integral(
-            material_id, geometry, temp_cold, temp_hot, num_points
+        # Calculate thermal conductivity integral from cold to hot
+        k_integral = self.calculate_thermal_conductivity_integral(
+            material_id, temp_cold, temp_hot, num_points
         )
         
-        # Calculate power: Q = ΔT / R
-        delta_t = temp_hot - temp_cold
-        power = delta_t / resistance_integral
+        # Calculate power: Q = (A/L) * ∫k(T)dT
+        area = geometry.cross_sectional_area()
+        power = (area / geometry.length) * k_integral
         
         return power
     
     def calculate_temperature_profile(self, material_id: str, geometry: Geometry,
-                                    temp_hot: float, temp_cold: float,
+                                    temp_hot: float = None, temp_cold: float = None,
+                                    thermal_power: float = None,
                                     num_points: int = 50) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate temperature profile along the length of the geometry.
         
+        From Fourier's law: Q/A(x) dx = -k(T) dT
+        Integrating: ∫[0 to x] Q/A(ξ) dξ = -∫[T_hot to T(x)] k(T) dT
+        
+        For constant cross-section A: Q*x/A = ∫[T(x) to T_hot] k(T) dT
+        
         Args:
             material_id: Material identifier
-            geometry: Geometry specification
-            temp_hot: Hot end temperature (K)
-            temp_cold: Cold end temperature (K)
+            geometry: Geometry specification (must have constant cross-section)
+            temp_hot: Hot end temperature (K) - required if thermal_power given
+            temp_cold: Cold end temperature (K) - optional if thermal_power given
+            thermal_power: Heat rate (W) - optional if both temperatures given
             num_points: Number of points along length
             
         Returns:
             Tuple of (positions, temperatures) arrays
         """
+        # Validate inputs - need either both temperatures OR (temp_hot + thermal_power)
+        if temp_hot is None:
+            raise ValueError("temp_hot is required")
+        
+        if temp_cold is None and thermal_power is None:
+            raise ValueError("Must provide either temp_cold or thermal_power")
+        
+        if temp_cold is not None and thermal_power is not None:
+            raise ValueError("Cannot specify both temp_cold and thermal_power - provide only one")
+        
+        # If both temperatures given, calculate thermal power
+        if temp_cold is not None:
+            if temp_hot <= temp_cold:
+                raise ValueError("temp_hot must be greater than temp_cold")
+            thermal_power = self.calculate_thermal_power(material_id, geometry, temp_hot, temp_cold)
+        
         # Create position array (0 to length)
         positions = np.linspace(0, geometry.length, num_points)
+        temperatures = np.zeros(num_points)
+        temperatures[0] = temp_hot  # Hot end boundary condition
         
-        # For now, use linear approximation
-        # TODO: Implement iterative solution for nonlinear k(T)
-        temperatures = np.linspace(temp_hot, temp_cold, num_points)
+        # Geometry properties
+        area = geometry.cross_sectional_area()
+        
+        # For each position, solve: Q*x/A = ∫[T(x) to T_hot] k(T) dT
+        for i in range(1, num_points):
+            x = positions[i]
+            target_integral = thermal_power * x / area
+            
+            # Find temperature T(x) such that ∫[T(x) to T_hot] k(T) dT = target_integral
+            # Use iterative solver (bisection method)
+            t_low = 4.0  # Minimum reasonable temperature
+            t_high = temp_hot
+            tolerance = 1e-6
+            max_iterations = 100
+            
+            for iteration in range(max_iterations):
+                t_mid = (t_low + t_high) / 2
+                
+                # Calculate integral from t_mid to temp_hot
+                try:
+                    integral = self.calculate_thermal_conductivity_integral(
+                        material_id, t_mid, temp_hot, 50
+                    )
+                except ValueError:
+                    # Temperature out of range, adjust bounds
+                    t_low = t_mid
+                    continue
+                
+                if abs(integral - target_integral) < tolerance:
+                    temperatures[i] = t_mid
+                    break
+                elif integral > target_integral:
+                    t_high = t_mid
+                else:
+                    t_low = t_mid
+            else:
+                # If convergence failed, use linear interpolation as fallback
+                if temp_cold is not None:
+                    temperatures[i] = temp_hot - (temp_hot - temp_cold) * x / geometry.length
+                else:
+                    # Estimate temp_cold from thermal power and use linear approximation
+                    estimated_temp_cold = temp_hot - 50  # Conservative estimate
+                    temperatures[i] = temp_hot - (temp_hot - estimated_temp_cold) * x / geometry.length
         
         return positions, temperatures
     
@@ -304,11 +316,11 @@ class ThermalCalculator:
         material_info = self.calculator.database._materials_data[material_id]
         
         # Calculate thermal properties
-        resistance_integral = self.calculate_thermal_resistance_integral(
-            material_id, geometry, temp_cold, temp_hot, num_points
-        )
         k_integral = self.calculate_thermal_conductivity_integral(
             material_id, temp_cold, temp_hot, num_points
+        )
+        thermal_power = self.calculate_thermal_power(
+            material_id, geometry, temp_hot, temp_cold, num_points
         )
         
         # Calculate thermal conductivities at endpoints
@@ -337,9 +349,9 @@ class ThermalCalculator:
                 'ratio': k_hot / k_cold if k_cold > 0 else float('inf')
             },
             'results': {
-                'thermal_resistance_integral_K_per_W': resistance_integral,
                 'thermal_conductivity_integral_W_K_per_m_K': k_integral,
-                'average_thermal_conductivity_W_per_m_K': k_integral / (temp_hot - temp_cold)
+                'average_thermal_conductivity_W_per_m_K': k_integral / (temp_hot - temp_cold),
+                'thermal_power_W': thermal_power
             }
         }
         
